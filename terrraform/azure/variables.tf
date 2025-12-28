@@ -1,0 +1,68 @@
+variable "resource_group_name" {
+  type        = string
+  description = "Name of the Azure Resource Group to create"
+  default     = "my-aks-rg"
+}
+
+variable "location" {
+  type        = string
+  description = "Azure region for resources"
+  default     = "eastus"
+}
+
+variable "cluster_name" {
+  type        = string
+  description = "AKS cluster name"
+  default     = "my-aks-cluster"
+}
+
+variable "vnet_cidr" {
+  type        = string
+  description = "CIDR block for the Virtual Network"
+  default     = "10.0.0.0/16"
+}
+
+variable "aks_subnet_cidr" {
+  type        = string
+  description = "CIDR block for the AKS subnet"
+  default     = "10.0.1.0/24"
+}
+
+variable "acr_name" {
+  type        = string
+  description = "Azure Container Registry name (lowercase, 5-50 chars, globally unique)"
+  default     = "myacr12345"
+
+  validation {
+    condition     = length(var.acr_name) >= 5 && length(var.acr_name) <= 50 && can(regex("^[a-z0-9]+$", var.acr_name))
+    error_message = "acr_name must be 5-50 chars, lowercase letters and numbers only."
+  }
+}
+
+variable "acr_sku" {
+  type        = string
+  description = "ACR SKU (Basic | Standard | Premium)"
+  default     = "Basic"
+
+  validation {
+    condition     = contains(["Basic", "Standard", "Premium"], var.acr_sku)
+    error_message = "acr_sku must be one of: Basic, Standard, Premium."
+  }
+}
+
+variable "node_count" {
+  type        = number
+  description = "Number of nodes in the default node pool"
+  default     = 3
+
+  validation {
+    condition     = var.node_count > 0
+    error_message = "node_count must be greater than 0."
+  }
+}
+
+variable "vm_size" {
+  type        = string
+  description = "VM size for AKS nodes"
+  default     = "Standard_DS2_v2"
+}
