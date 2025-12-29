@@ -66,3 +66,37 @@ variable "vm_size" {
   description = "VM size for AKS nodes"
   default     = "Standard_DS2_v2"
 }
+variable "environment" {
+  type        = string
+  description = "Environment name (dev, test, prod)"
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "test", "prod"], var.environment)
+    error_message = "environment must be one of: dev, test, prod."
+  }
+}
+
+variable "kubernetes_version" {
+  type        = string
+  description = "Kubernetes version to use for the AKS cluster"
+  default     = "1.28"
+}
+
+variable "enable_log_analytics" {
+  type        = bool
+  description = "Enable Log Analytics for AKS cluster"
+  default     = true
+}
+
+variable "addon_http_application_routing_enabled" {
+  type        = bool
+  description = "Enable HTTP application routing"
+  default     = false
+}
+
+variable "addon_azure_policy_enabled" {
+  type        = bool
+  description = "Enable Azure Policy for Kubernetes"
+  default     = false
+}

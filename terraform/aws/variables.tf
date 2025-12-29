@@ -55,3 +55,42 @@ variable "ecr_repository_name" {
     error_message = "ecr_repository_name must contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen."
   }
 }
+
+variable "environment" {
+  type        = string
+  description = "Environment name (dev, test, prod)"
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "test", "prod"], var.environment)
+    error_message = "environment must be one of: dev, test, prod."
+  }
+}
+
+variable "enable_logging" {
+  type        = bool
+  description = "Enable EKS cluster control plane logging"
+  default     = true
+}
+
+variable "log_types" {
+  type        = list(string)
+  description = "EKS control plane log types to enable"
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "enabled_cluster_log_types" {
+  type        = list(string)
+  description = "List of control plane logging types to enable"
+  default     = ["api", "audit"]
+
+  validation {
+    condition = alltrue([
+      for log_type in var.enabled_cluster_log_types : contains(
+        ["api", "audit", "authenticator", "controllerManager", "scheduler"],
+        log_type
+      )
+    ])
+    error_message = "enabled_cluster_log_types must contain valid EKS log types."
+  }
+}
