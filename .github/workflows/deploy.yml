@@ -8,7 +8,17 @@ on:
       - 'helm/**'
       - 'app/**'
       - '.github/workflows/deploy.yml'
-
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
 jobs:
   deploy:
     runs-on: ubuntu-latest
