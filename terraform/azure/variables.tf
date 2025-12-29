@@ -31,7 +31,7 @@ variable "aks_subnet_cidr" {
 variable "acr_name" {
   type        = string
   description = "Azure Container Registry name (lowercase, 5-50 chars, globally unique)"
-  default     = "myacr12345"
+  default     = "demoacr12345"
 
   validation {
     condition     = length(var.acr_name) >= 5 && length(var.acr_name) <= 50 && can(regex("^[a-z0-9]+$", var.acr_name))

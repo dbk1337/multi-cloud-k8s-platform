@@ -15,4 +15,12 @@ public class HelloController {
         resp.put("message","Hello from Spring Boot backend");
         return resp;
     }
+
+    @GetMapping("/")
+    public Map<String,String> root() {
+        Map<String,String> resp = new HashMap<>();
+        resp.put("status","API is running");
+        resp.put("endpoints","[GET /api/hello]");
+        return resp;
+    }
 }

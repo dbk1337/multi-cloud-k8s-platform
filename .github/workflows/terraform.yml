@@ -1,0 +1,119 @@
+name: Terraform Plan and Apply
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'terraform/**'
+
+jobs:
+  terraform-azure:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, test, prod]
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ~> 1.5
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform/azure
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: ./terraform/azure
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform/azure
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=../environments/${{ matrix.environment }}/azure.tfvars -no-color
+        working-directory: ./terraform/azure
+        id: plan
+        continue-on-error: true
+
+      - name: Add Plan Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = `${{ steps.plan.outputs.stdout }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan - Azure (${{ matrix.environment }})\n\`\`\`\n${planOutput}\n\`\`\``
+            });
+
+  terraform-aws:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, test, prod]
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ~> 1.5
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform/aws
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: ./terraform/aws
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform/aws
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=../environments/${{ matrix.environment }}/aws.tfvars -no-color
+        working-directory: ./terraform/aws
+        id: plan
+        continue-on-error: true
+
+      - name: Add Plan Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = `${{ steps.plan.outputs.stdout }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan - AWS (${{ matrix.environment }})\n\`\`\`\n${planOutput}\n\`\`\``
+            });

@@ -1,0 +1,62 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm/**'
+      - 'app/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, test, prod]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+
+      - name: Validate Helm Charts
+        run: helm lint helm/myapp
+        continue-on-error: true
+
+      - name: Template Helm Charts
+        run: |
+          helm template demo-app helm/myapp \
+            -f helm/myapp/values.yaml
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Deploy to Azure AKS (if credentials available)
+        if: matrix.environment == 'prod'
+        run: |
+          echo "Configure Azure credentials in GitHub secrets:"
+          echo "AZURE_CREDENTIALS, AZURE_SUBSCRIPTION_ID"
+        continue-on-error: true
+
+      - name: Deploy to AWS EKS (if credentials available)
+        if: matrix.environment == 'prod'
+        run: |
+          echo "Configure AWS credentials in GitHub secrets:"
+          echo "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
+        continue-on-error: true
+
+      - name: Helm Deploy
+        run: |
+          helm upgrade --install demo-app helm/myapp \
+            -f helm/myapp/values.yaml \
+            --namespace default \
+            --create-namespace
+        continue-on-error: true

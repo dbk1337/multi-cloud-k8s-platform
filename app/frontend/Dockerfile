@@ -1,9 +1,11 @@
-FROM node:18.17.0-alpine3.18 AS build
+FROM node:18.17.0-slim AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY public ./public
 COPY src ./src
+RUN npm i react-scripts
+RUN npm install scheduler --save
 RUN npm run build
 
 FROM nginx:stable-alpine
