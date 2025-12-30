@@ -1,16 +1,4 @@
-terraform {
-    required_version = ">= 1.0"
-    required_providers {
-        aws = {
-            source  = "hashicorp/aws"
-            version = "~> 5.0"
-        }
-    }
-}
-
-provider "aws" {
-    region = var.aws_region
-}
+# Terraform AWS Provider Configuration
 
 # VPC
 resource "aws_vpc" "main" {
@@ -222,30 +210,4 @@ resource "aws_ecr_repository" "main" {
 # Data source for availability zones
 data "aws_availability_zones" "available" {
     state = "available"
-}
-
-# Outputs
-output "eks_cluster_name" {
-    value       = aws_eks_cluster.main.name
-    description = "EKS cluster name"
-}
-
-output "eks_cluster_endpoint" {
-    value       = aws_eks_cluster.main.endpoint
-    description = "Endpoint for EKS control plane"
-}
-
-output "eks_cluster_version" {
-    value       = aws_eks_cluster.main.version
-    description = "The Kubernetes server version"
-}
-
-output "ecr_repository_url" {
-    value       = aws_ecr_repository.main.repository_url
-    description = "ECR repository URL"
-}
-
-output "vpc_id" {
-    value       = aws_vpc.main.id
-    description = "VPC ID"
 }

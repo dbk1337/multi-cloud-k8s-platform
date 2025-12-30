@@ -66,33 +66,27 @@ Postgres Postgres
 ```text
 .
 ├── app/                         # Application source code
-│   ├── Dockerfile
-│   └── src/
-├── k8s/                         # Kubernetes manifests / Helm charts
-│   ├── base/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   └── ingress.yaml
-│   └── overlays/
-│       ├── aws/
-│       └── azure/
-├── terraform/
-│   ├── modules/
-│   │   ├── network/
-│   │   ├── kubernetes/
-│   │   ├── database/
-│   │   └── security/
-│   ├── aws/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── backend.tf
-│   ├── azure/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── backend.tf
-│   └── environments/
-│       ├── dev.tfvars
-│       └── prod.tfvars
+│   ├── backend/
+│   └── frontend/
+terraform/
+├── modules/
+│   ├── network/
+│   ├── eks/
+│   ├── aks/
+│   └── iam/
+├── aws/
+│   ├── main.tf        # calls network + eks
+│   ├── backend.tf
+│   ├── providers.tf
+│   └── outputs.tf
+├── azure/
+│   ├── main.tf        # calls network + aks
+│   ├── backend.tf
+│   ├── providers.tf
+│   └── outputs.tf
+└── environments/
+    ├── dev.tfvars
+    └── prod.tfvars
 ├── .github/
 │   └── workflows/
 │       ├── terraform-ci.yml
