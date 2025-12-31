@@ -40,15 +40,28 @@ resource "azurerm_container_registry" "acr" {
     resource_group_name = azurerm_resource_group.rg.name
     location            = azurerm_resource_group.rg.location
     sku                 = var.acr_sku
-    admin_enabled       = true
+    admin_enabled       = false
+}
+
+# Optional Log Analytics workspace for cluster monitoring
+resource "azurerm_log_analytics_workspace" "aks" {
+    count               = var.enable_log_analytics ? 1 : 0
+    name                = "${var.cluster_name}-logs"
+    location            = azurerm_resource_group.rg.location
+    resource_group_name = azurerm_resource_group.rg.name
+    sku                 = "PerGB2018"
+    retention_in_days   = 30
 }
 
 # AKS Cluster
 resource "azurerm_kubernetes_cluster" "aks" {
     name                = var.cluster_name
+    kubernetes_version  = var.kubernetes_version
     location            = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
     dns_prefix          = var.cluster_name
+
+    api_server_authorized_ip_ranges = var.api_server_authorized_ip_ranges
 
     default_node_pool {
         name           = "default"
@@ -63,7 +76,23 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
     network_profile {
         network_plugin    = "azure"
+        network_policy    = "azure"
         load_balancer_sku = "standard"
+    }
+
+    addon_profile {
+        http_application_routing {
+            enabled = var.addon_http_application_routing_enabled
+        }
+
+        azure_policy {
+            enabled = var.addon_azure_policy_enabled
+        }
+
+        oms_agent {
+            enabled                    = var.enable_log_analytics
+            log_analytics_workspace_id = var.enable_log_analytics ? azurerm_log_analytics_workspace.aks[0].id : null
+        }
     }
 
     depends_on = [azurerm_subnet.aks_subnet]

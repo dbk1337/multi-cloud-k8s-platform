@@ -50,13 +50,13 @@ Docker Build & Push
 |
 v
 Terraform Apply
-| |
+|    |
 EKS AKS
-| |
+|   |
 Ingress Ingress
-| |
+|           |
 K8s App K8s App
-| |
+|           |
 Postgres Postgres
 
 ---

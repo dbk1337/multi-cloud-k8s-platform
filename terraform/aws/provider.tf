@@ -22,7 +22,6 @@ provider "aws" {
       Environment = var.environment
       Project     = "multi-cloud-k8s"
       ManagedBy   = "Terraform"
-      CreatedAt   = timestamp()
     }
   }
 }

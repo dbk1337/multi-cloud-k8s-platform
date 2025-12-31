@@ -66,6 +66,13 @@ variable "vm_size" {
   description = "VM size for AKS nodes"
   default     = "Standard_DS2_v2"
 }
+
+variable "api_server_authorized_ip_ranges" {
+  type        = list(string)
+  description = "CIDR ranges allowed to access the AKS API server; empty list allows all (not recommended for production)"
+  default     = []
+}
+
 variable "environment" {
   type        = string
   description = "Environment name (dev, test, prod)"
