@@ -1,0 +1,20 @@
+{{- if .Values.backend.enabled }}
+{{- $ns := default .Release.Namespace .Values.namespace.name }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "myapp.fullname" . }}-backend
+  namespace: {{ $ns }}
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  type: {{ .Values.backend.service.type }}
+  selector:
+    {{- include "myapp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: {{ .Values.backend.service.port }}
+      targetPort: http
+{{- end }}

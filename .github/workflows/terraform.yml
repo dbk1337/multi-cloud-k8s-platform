@@ -1,0 +1,158 @@
+name: Terraform Plan and Apply
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+
+jobs:
+  terraform-azure:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        environment: [dev, test, prod]
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        if: secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ~> 1.5
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform/azure
+
+      - name: Terraform Init (remote state)
+        if: secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != ''
+        run: terraform init
+        working-directory: ./terraform/azure
+
+      - name: Terraform Init (local state)
+        if: secrets.AZURE_CLIENT_ID == '' || secrets.AZURE_TENANT_ID == '' || secrets.AZURE_SUBSCRIPTION_ID == ''
+        run: terraform init -backend=false
+        working-directory: ./terraform/azure
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform/azure
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=../environments/${{ matrix.environment }}/azure.tfvars -no-color
+        working-directory: ./terraform/azure
+        id: plan
+
+      - name: Add Plan Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = `${{ steps.plan.outputs.stdout }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan - Azure (${{ matrix.environment }})\n\`\`\`\n${planOutput}\n\`\`\``
+            });
+
+  terraform-aws:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        environment: [dev, test, prod]
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ~> 1.5
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform/aws
+
+      - name: Terraform Init (remote state)
+        if: secrets.AWS_ROLE_ARN != ''
+        run: terraform init
+        working-directory: ./terraform/aws
+
+      - name: Terraform Init (local state)
+        if: secrets.AWS_ROLE_ARN == ''
+        run: terraform init -backend=false
+        working-directory: ./terraform/aws
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform/aws
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=../environments/${{ matrix.environment }}/aws.tfvars -no-color
+        working-directory: ./terraform/aws
+        id: plan
+
+      - name: Add Plan Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = `${{ steps.plan.outputs.stdout }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan - AWS (${{ matrix.environment }})\n\`\`\`\n${planOutput}\n\`\`\``
+            });

@@ -1,0 +1,204 @@
+name: Code Quality and Security Checks
+
+concurrency:
+  group: quality-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  sonarqube:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build backend
+        run: mvn -B -DskipTests package
+        working-directory: ./app/backend
+
+      - name: SonarQube Scan (Backend)
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=multi-cloud-k8s-platform
+            -Dsonar.sources=app/backend/src/main
+            -Dsonar.tests=app/backend/src/test
+            -Dsonar.java.binaries=app/backend/target/classes
+
+  security-scan:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.24.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  lint:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint on Dockerfiles
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: app/backend/Dockerfile,app/frontend/Dockerfile
+          ignore: DL3008,DL3009
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './app/frontend/package.json'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./app/frontend
+
+      - name: Run ESLint
+        run: npm run lint --if-present
+        working-directory: ./app/frontend
+
+  tflint:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.50.3
+
+      - name: Initialize TFLint
+        run: tflint --init
+
+      - name: Run TFLint (AWS)
+        run: tflint --chdir=terraform/aws
+        continue-on-error: true
+
+      - name: Run TFLint (Azure)
+        run: tflint --chdir=terraform/azure
+        continue-on-error: true
+
+  checkov:
+    runs-on: [self-hosted, onprem]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: cli
+          soft_fail: true
+
+  tfsec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-sarif-action@v1.0.4
+        with:
+          sarif_file: tfsec.sarif
+          working_directory: ./terraform
+
+      - name: Upload tfsec results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: tfsec.sarif
+
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java', 'javascript' ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2

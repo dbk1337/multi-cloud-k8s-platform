@@ -1,0 +1,68 @@
+namespace:
+  create: true
+  name: azure-app
+
+backend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: myacr.azurecr.io/myapp-backend
+    tag: latest
+  env:
+    CLOUD_PROVIDER: azure
+    ENVIRONMENT: production
+  livenessProbe:
+    path: /api/hello
+  readinessProbe:
+    path: /api/hello
+  ingress:
+    enabled: true
+    className: azure/application-gateway
+    annotations:
+      kubernetes.io/ingress.class: azure/application-gateway
+      appgw.ingress.kubernetes.io/ssl-redirect: "true"
+      appgw.ingress.kubernetes.io/use-private-ip: "false"
+    hosts:
+      - host: api.myapp.azure.example.com
+        paths:
+          - path: /api
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+frontend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: myacr.azurecr.io/myapp-frontend
+    tag: latest
+  livenessProbe:
+    path: /
+  readinessProbe:
+    path: /
+  ingress:
+    enabled: true
+    className: azure/application-gateway
+    annotations:
+      kubernetes.io/ingress.class: azure/application-gateway
+      appgw.ingress.kubernetes.io/ssl-redirect: "true"
+      appgw.ingress.kubernetes.io/use-private-ip: "false"
+    hosts:
+      - host: myapp.azure.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
