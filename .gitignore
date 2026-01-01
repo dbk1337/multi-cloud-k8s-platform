@@ -2,4 +2,4 @@
 app/backend/target
 terraform/aws/.terraform/
 .env
-actions-runner
+actions-runner/
