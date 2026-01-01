@@ -105,3 +105,25 @@ output "configure_kubectl" {
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.main.name}"
   description = "Command to configure kubectl"
 }
+
+# IRSA / OIDC Outputs
+output "eks_oidc_provider_arn" {
+  value       = aws_iam_openid_connect_provider.eks.arn
+  description = "IAM OIDC provider ARN for the EKS cluster"
+}
+
+# ALB Controller Outputs
+output "alb_controller_role_arn" {
+  value       = try(aws_iam_role.alb_controller[0].arn, null)
+  description = "IAM role ARN for AWS Load Balancer Controller"
+}
+
+output "alb_controller_service_account" {
+  value       = try(kubernetes_service_account.alb_controller[0].metadata[0].name, null)
+  description = "Service account name used by AWS Load Balancer Controller"
+}
+
+output "alb_controller_namespace" {
+  value       = var.alb_controller_namespace
+  description = "Namespace where AWS Load Balancer Controller is deployed"
+}

@@ -4,13 +4,17 @@ Production-style reference platform that provisions Kubernetes in AWS and Azure 
 
 ## What this repo delivers
 - Multi-cloud IaC with Terraform for EKS and AKS
+- IRSA and cloud-native ingress controllers (ALB and Application Gateway)
 - Containerized backend (Spring Boot) and frontend (React + Nginx)
 - Helm chart for repeatable Kubernetes deployment
-- GitHub Actions for build, quality checks, and Terraform plan
+- GitHub Actions for build, OIDC auth, quality checks, and Terraform plan
+- IaC linting and security scans with tflint, checkov, and tfsec
 
 ## Repository layout
 ```text
 .
+  .github/
+    workflows/
   app/                 Application source code
     backend/           Spring Boot API
     frontend/          React UI
@@ -54,7 +58,7 @@ helm upgrade --install demo-app helm/myapp \
 Cloud-specific values:
 ```bash
 # AWS
-helm upgrade --install demo-app helm/myapp -f helm/myapp/values-aws.yaml
+helm upgrade --install demo-app helm/myapp -f helm/myapp/values-eks.yaml
 
 # Azure
 helm upgrade --install demo-app helm/myapp -f helm/myapp/values-azure.yaml
@@ -75,11 +79,45 @@ cd terraform
 ./deploy-azure.sh plan dev
 ```
 
+## How to run (copy/paste)
+AWS (EKS):
+```bash
+cd terraform/aws
+terraform init
+terraform plan -var-file=../environments/dev/aws.tfvars
+terraform apply -var-file=../environments/dev/aws.tfvars
+aws eks update-kubeconfig --region us-east-1 --name my-eks-cluster-dev
+helm upgrade --install demo-app ../../helm/myapp \
+  -f ../../helm/myapp/values-eks.yaml \
+  --namespace default \
+  --create-namespace
+```
+
+Azure (AKS):
+```bash
+cd terraform/azure
+terraform init
+terraform plan -var-file=../environments/dev/azure.tfvars
+terraform apply -var-file=../environments/dev/azure.tfvars
+az aks get-credentials --resource-group my-aks-rg-dev --name my-aks-cluster-dev
+helm upgrade --install demo-app ../../helm/myapp \
+  -f ../../helm/myapp/values-azure.yaml \
+  --namespace default \
+  --create-namespace
+```
+
 ## CI/CD
 GitHub Actions workflows are in `.github/workflows`:
 - Image build and push for backend/frontend
 - Quality checks (Trivy, tfsec, CodeQL, SonarCloud)
 - Terraform plan for AWS and Azure
+
+## CI OIDC auth (optional)
+To enable remote state access in CI using OIDC, set these GitHub secrets:
+- `AWS_ROLE_ARN`
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
 
 ## License
 MIT. See `LICENSE`.

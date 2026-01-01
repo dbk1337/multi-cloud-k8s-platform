@@ -34,6 +34,15 @@ resource "azurerm_subnet" "aks_subnet" {
     address_prefixes     = [var.aks_subnet_cidr]
 }
 
+# Subnet for Application Gateway (AGIC)
+resource "azurerm_subnet" "appgw" {
+    count                = var.enable_app_gateway_ingress ? 1 : 0
+    name                 = "${var.cluster_name}-appgw-subnet"
+    resource_group_name  = azurerm_resource_group.rg.name
+    virtual_network_name = azurerm_virtual_network.vnet.name
+    address_prefixes     = [var.app_gateway_subnet_cidr]
+}
+
 # Azure Container Registry
 resource "azurerm_container_registry" "acr" {
     name                = var.acr_name
@@ -78,6 +87,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
         network_plugin    = "azure"
         network_policy    = "azure"
         load_balancer_sku = "standard"
+    }
+
+    dynamic "ingress_application_gateway" {
+        for_each = var.enable_app_gateway_ingress ? [1] : []
+        content {
+            subnet_id   = azurerm_subnet.appgw[0].id
+            gateway_name = var.app_gateway_name != "" ? var.app_gateway_name : "${var.cluster_name}-appgw"
+        }
     }
 
     addon_profile {

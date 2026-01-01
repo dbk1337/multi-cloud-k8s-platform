@@ -12,3 +12,4 @@ node_instance_type   = "t3.medium"
 ecr_repository_name  = "demo-app"
 enable_logging       = true
 enabled_cluster_log_types = ["api", "audit"]
+enable_alb_ingress_controller = true

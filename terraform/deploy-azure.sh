@@ -66,6 +66,18 @@ check_terraform_state_backend() {
         echo "  az storage account create --resource-group $RG --name $STORAGE --sku Standard_LRS"
         echo "Or update backend.tf with your storage account"
     fi
+
+    if az storage container show --name "$CONTAINER" --account-name "$STORAGE" --auth-mode login > /dev/null 2>&1; then
+        echo -e "${GREEN}[OK] Storage container exists: $CONTAINER${NC}"
+    else
+        echo -e "${YELLOW}[WARN] Storage container not found: $CONTAINER${NC}"
+        read -p "Create it? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            az storage container create --name "$CONTAINER" --account-name "$STORAGE" --auth-mode login
+            echo -e "${GREEN}[OK] Storage container created${NC}"
+        fi
+    fi
 }
 
 check_terraform_variables() {

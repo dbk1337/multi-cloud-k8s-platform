@@ -94,3 +94,27 @@ variable "enabled_cluster_log_types" {
     error_message = "enabled_cluster_log_types must contain valid EKS log types."
   }
 }
+
+variable "enable_alb_ingress_controller" {
+  type        = bool
+  description = "Enable AWS Load Balancer Controller (ALB Ingress) installation"
+  default     = true
+}
+
+variable "alb_controller_namespace" {
+  type        = string
+  description = "Namespace for AWS Load Balancer Controller"
+  default     = "kube-system"
+}
+
+variable "alb_controller_service_account_name" {
+  type        = string
+  description = "Service account name for AWS Load Balancer Controller"
+  default     = "aws-load-balancer-controller"
+}
+
+variable "alb_controller_chart_version" {
+  type        = string
+  description = "Helm chart version for AWS Load Balancer Controller"
+  default     = "1.7.1"
+}

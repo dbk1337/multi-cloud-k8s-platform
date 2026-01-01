@@ -107,6 +107,50 @@ jobs:
         run: npm run lint --if-present
         working-directory: ./app/frontend
 
+  tflint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.50.3
+
+      - name: Initialize TFLint
+        run: tflint --init
+
+      - name: Run TFLint (AWS)
+        run: tflint --chdir=terraform/aws
+        continue-on-error: true
+
+      - name: Run TFLint (Azure)
+        run: tflint --chdir=terraform/azure
+        continue-on-error: true
+
+  checkov:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: cli
+          soft_fail: true
+
   tfsec:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -252,3 +252,96 @@ resource "aws_route_table_association" "private" {
     subnet_id      = aws_subnet.private.id
     route_table_id = aws_route_table.private.id
 }
+
+# OIDC provider for IRSA
+data "tls_certificate" "eks_oidc" {
+    url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+    url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+    client_id_list  = ["sts.amazonaws.com"]
+    thumbprint_list = [data.tls_certificate.eks_oidc.certificates[0].sha1_fingerprint]
+}
+
+# AWS Load Balancer Controller (ALB Ingress)
+resource "aws_iam_policy" "alb_controller" {
+    count       = var.enable_alb_ingress_controller ? 1 : 0
+    name        = "${var.cluster_name}-alb-controller"
+    description = "IAM policy for AWS Load Balancer Controller"
+    policy      = file("${path.module}/alb-iam-policy.json")
+}
+
+resource "aws_iam_role" "alb_controller" {
+    count = var.enable_alb_ingress_controller ? 1 : 0
+    name  = "${var.cluster_name}-alb-controller"
+
+    assume_role_policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+            {
+                Effect = "Allow"
+                Principal = {
+                    Federated = aws_iam_openid_connect_provider.eks.arn
+                }
+                Action = "sts:AssumeRoleWithWebIdentity"
+                Condition = {
+                    StringEquals = {
+                        "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud" = "sts.amazonaws.com"
+                        "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:${var.alb_controller_namespace}:${var.alb_controller_service_account_name}"
+                    }
+                }
+            }
+        ]
+    })
+}
+
+resource "aws_iam_role_policy_attachment" "alb_controller" {
+    count      = var.enable_alb_ingress_controller ? 1 : 0
+    role       = aws_iam_role.alb_controller[0].name
+    policy_arn = aws_iam_policy.alb_controller[0].arn
+}
+
+resource "kubernetes_service_account" "alb_controller" {
+    count = var.enable_alb_ingress_controller ? 1 : 0
+
+    metadata {
+        name      = var.alb_controller_service_account_name
+        namespace = var.alb_controller_namespace
+        labels = {
+            "app.kubernetes.io/name"       = "aws-load-balancer-controller"
+            "app.kubernetes.io/managed-by" = "Terraform"
+        }
+        annotations = {
+            "eks.amazonaws.com/role-arn" = aws_iam_role.alb_controller[0].arn
+        }
+    }
+
+    depends_on = [aws_eks_node_group.main]
+}
+
+locals {
+    alb_controller_values = {
+        clusterName = aws_eks_cluster.main.name
+        region      = var.aws_region
+        vpcId       = aws_vpc.main.id
+        serviceAccount = {
+            create = false
+            name   = var.alb_controller_service_account_name
+        }
+    }
+}
+
+resource "helm_release" "alb_controller" {
+    count            = var.enable_alb_ingress_controller ? 1 : 0
+    name             = "aws-load-balancer-controller"
+    repository       = "https://aws.github.io/eks-charts"
+    chart            = "aws-load-balancer-controller"
+    version          = var.alb_controller_chart_version
+    namespace        = var.alb_controller_namespace
+    create_namespace = false
+
+    values = [yamlencode(local.alb_controller_values)]
+
+    depends_on = [kubernetes_service_account.alb_controller]
+}

@@ -42,6 +42,7 @@ check_terraform_state_backend() {
     echo -e "${BLUE}Checking Terraform state backend...${NC}"
 
     BUCKET="terraform-state-bucket"
+    TABLE="terraform-state-lock"
     REGION=${REGION:-us-east-1}
 
     if aws s3api head-bucket --bucket "$BUCKET" --region "$REGION" 2>/dev/null; then
@@ -55,6 +56,23 @@ check_terraform_state_backend() {
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             exit 1
+        fi
+    fi
+
+    if aws dynamodb describe-table --table-name "$TABLE" --region "$REGION" > /dev/null 2>&1; then
+        echo -e "${GREEN}[OK] DynamoDB lock table exists: $TABLE${NC}"
+    else
+        echo -e "${YELLOW}[WARN] DynamoDB lock table not found: $TABLE${NC}"
+        read -p "Create it? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            aws dynamodb create-table \
+              --table-name "$TABLE" \
+              --attribute-definitions AttributeName=LockID,AttributeType=S \
+              --key-schema AttributeName=LockID,KeyType=HASH \
+              --billing-mode PAY_PER_REQUEST \
+              --region "$REGION"
+            echo -e "${GREEN}[OK] DynamoDB lock table created${NC}"
         fi
     fi
 }

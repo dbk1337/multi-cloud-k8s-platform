@@ -1,0 +1,72 @@
+namespace:
+  create: true
+  name: aws-app
+
+backend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: "123456789012.dkr.ecr.us-east-1.amazonaws.com/myapp-backend"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  env:
+    CLOUD_PROVIDER: aws
+    ENVIRONMENT: production
+  livenessProbe:
+    path: /api/hello
+  readinessProbe:
+    path: /api/hello
+  ingress:
+    enabled: true
+    className: alb
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    hosts:
+      - host: api.myapp.aws.example.com
+        paths:
+          - path: /api
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+frontend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: "123456789012.dkr.ecr.us-east-1.amazonaws.com/myapp-frontend"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  livenessProbe:
+    path: /
+  readinessProbe:
+    path: /
+  ingress:
+    enabled: true
+    className: alb
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    hosts:
+      - host: myapp.aws.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

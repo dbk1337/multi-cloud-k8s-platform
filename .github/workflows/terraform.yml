@@ -30,10 +30,24 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        if: secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -44,7 +58,13 @@ jobs:
         run: terraform fmt -check -recursive
         working-directory: ./terraform/azure
 
-      - name: Terraform Init
+      - name: Terraform Init (remote state)
+        if: secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != ''
+        run: terraform init
+        working-directory: ./terraform/azure
+
+      - name: Terraform Init (local state)
+        if: secrets.AZURE_CLIENT_ID == '' || secrets.AZURE_TENANT_ID == '' || secrets.AZURE_SUBSCRIPTION_ID == ''
         run: terraform init -backend=false
         working-directory: ./terraform/azure
 
@@ -80,10 +100,20 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -94,7 +124,13 @@ jobs:
         run: terraform fmt -check -recursive
         working-directory: ./terraform/aws
 
-      - name: Terraform Init
+      - name: Terraform Init (remote state)
+        if: secrets.AWS_ROLE_ARN != ''
+        run: terraform init
+        working-directory: ./terraform/aws
+
+      - name: Terraform Init (local state)
+        if: secrets.AWS_ROLE_ARN == ''
         run: terraform init -backend=false
         working-directory: ./terraform/aws
 

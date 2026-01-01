@@ -91,6 +91,11 @@ output "aks_subnet_id" {
   description = "AKS subnet ID"
 }
 
+output "app_gateway_subnet_id" {
+  value       = try(azurerm_subnet.appgw[0].id, null)
+  description = "Application Gateway subnet ID (when AGIC is enabled)"
+}
+
 # ACR Outputs
 output "acr_login_server" {
   value       = azurerm_container_registry.acr.login_server

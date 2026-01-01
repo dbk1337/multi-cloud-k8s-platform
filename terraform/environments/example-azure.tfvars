@@ -15,3 +15,5 @@ kubernetes_version  = "1.28"
 enable_log_analytics = true
 addon_http_application_routing_enabled = false
 addon_azure_policy_enabled = false
+enable_app_gateway_ingress = false
+app_gateway_subnet_cidr = "10.0.2.0/24"
