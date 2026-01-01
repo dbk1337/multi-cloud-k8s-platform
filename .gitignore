@@ -1,3 +1,4 @@
 .vscode/settings.json
 app/backend/target
 terraform/aws/.terraform/
+.env
