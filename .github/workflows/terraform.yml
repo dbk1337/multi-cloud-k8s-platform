@@ -22,7 +22,7 @@ on:
 
 jobs:
   terraform-azure:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 30
     strategy:
       matrix:
@@ -92,7 +92,7 @@ jobs:
             });
 
   terraform-aws:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 30
     strategy:
       matrix:

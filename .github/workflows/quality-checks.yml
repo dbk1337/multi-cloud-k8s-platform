@@ -17,7 +17,7 @@ on:
 
 jobs:
   sonarqube:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 25
     permissions:
       contents: read
@@ -52,7 +52,7 @@ jobs:
             -Dsonar.java.binaries=app/backend/target/classes
 
   security-scan:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -77,7 +77,7 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -108,7 +108,7 @@ jobs:
         working-directory: ./app/frontend
 
   tflint:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -134,7 +134,7 @@ jobs:
         continue-on-error: true
 
   checkov:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     timeout-minutes: 15
     permissions:
       contents: read

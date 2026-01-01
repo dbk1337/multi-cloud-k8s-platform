@@ -187,6 +187,7 @@ GitHub Actions workflows are in `.github/workflows`:
 - Image build and push for backend/frontend
 - Quality checks (Trivy, tfsec, CodeQL, SonarCloud)
 - Terraform plan for AWS and Azure
+All workflows require a self-hosted GitHub runner with the `onprem` label.
 
 ## License
 MIT. See `LICENSE`.

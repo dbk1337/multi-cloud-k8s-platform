@@ -21,7 +21,7 @@ on:
           - prod
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, onprem]
     strategy:
       matrix:
         environment: [dev, test, prod]
