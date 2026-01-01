@@ -1,29 +1,113 @@
-replicaCount: 2
-
-image:
-  repository: myapp
-  tag: latest
-  pullPolicy: IfNotPresent
-
-service:
-  type: ClusterIP
-  port: 80
-
-resources:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 300m
-    memory: 256Mi
-
-ingress:
-  enabled: false
-
-config:
-  CLOUD_PROVIDER: generic
-  ENVIRONMENT: dev
-
 namespace:
   create: true
   name: myapp
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: myapp-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  env:
+    CLOUD_PROVIDER: generic
+    ENVIRONMENT: dev
+  livenessProbe:
+    enabled: true
+    path: /api/hello
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    path: /api/hello
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: myapp.example.com
+        paths:
+          - path: /api
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  podSecurityContext: {}
+  securityContext: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: myapp-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  livenessProbe:
+    enabled: true
+    path: /
+    port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    path: /
+    port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: myapp.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  podSecurityContext: {}
+  securityContext: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

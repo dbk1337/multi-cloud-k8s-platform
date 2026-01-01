@@ -34,20 +34,20 @@ validate_aws_credentials() {
     fi
     ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
     REGION=$(aws configure get region || echo "us-east-1")
-    echo -e "${GREEN}AWS Account: $ACCOUNT_ID${NC}"
-    echo -e "${GREEN}AWS Region: $REGION${NC}"
+    echo -e "${GREEN}[OK] AWS Account: $ACCOUNT_ID${NC}"
+    echo -e "${GREEN}[OK] AWS Region: $REGION${NC}"
 }
 
 check_terraform_state_backend() {
     echo -e "${BLUE}Checking Terraform state backend...${NC}"
-    
+
     BUCKET="terraform-state-bucket"
     REGION=${REGION:-us-east-1}
-    
+
     if aws s3api head-bucket --bucket "$BUCKET" --region "$REGION" 2>/dev/null; then
-        echo -e "${GREEN}✓ S3 bucket exists: $BUCKET${NC}"
+        echo -e "${GREEN}[OK] S3 bucket exists: $BUCKET${NC}"
     else
-        echo -e "${YELLOW}⚠ S3 bucket not found: $BUCKET${NC}"
+        echo -e "${YELLOW}[WARN] S3 bucket not found: $BUCKET${NC}"
         echo "Create it with:"
         echo "  aws s3api create-bucket --bucket $BUCKET --region $REGION"
         echo "Or update backend.tf with your bucket name"
@@ -65,7 +65,7 @@ check_terraform_variables() {
         echo "Create it using: cp environments/example-aws.tfvars $TERRAFORM_VARS"
         exit 1
     fi
-    echo -e "${GREEN}✓ Using variables: $TERRAFORM_VARS${NC}"
+    echo -e "${GREEN}[OK] Using variables: $TERRAFORM_VARS${NC}"
 }
 
 # Command functions
@@ -74,7 +74,7 @@ terraform_init() {
     cd "$AWS_DIR"
     terraform init
     cd - > /dev/null
-    echo -e "${GREEN}✓ Terraform initialized${NC}"
+    echo -e "${GREEN}[OK] Terraform initialized${NC}"
 }
 
 terraform_validate() {
@@ -82,7 +82,7 @@ terraform_validate() {
     cd "$AWS_DIR"
     terraform validate
     cd - > /dev/null
-    echo -e "${GREEN}✓ Configuration is valid${NC}"
+    echo -e "${GREEN}[OK] Configuration is valid${NC}"
 }
 
 terraform_fmt() {
@@ -90,7 +90,7 @@ terraform_fmt() {
     cd "$AWS_DIR"
     terraform fmt -recursive
     cd - > /dev/null
-    echo -e "${GREEN}✓ Files formatted${NC}"
+    echo -e "${GREEN}[OK] Files formatted${NC}"
 }
 
 terraform_plan() {
@@ -98,15 +98,15 @@ terraform_plan() {
     cd "$AWS_DIR"
     terraform plan -var-file="$TERRAFORM_VARS" -out=tfplan
     cd - > /dev/null
-    echo -e "${GREEN}✓ Plan saved to tfplan${NC}"
+    echo -e "${GREEN}[OK] Plan saved to tfplan${NC}"
 }
 
 terraform_apply() {
-    echo -e "${YELLOW}⚠ Applying Terraform changes...${NC}"
+    echo -e "${YELLOW}[WARN] Applying Terraform changes...${NC}"
     echo "This will create or modify AWS resources"
     read -p "Type 'yes' to confirm: " -r
     echo
-    
+
     if [[ $REPLY == "yes" ]]; then
         cd "$AWS_DIR"
         if [[ -f tfplan ]]; then
@@ -116,14 +116,14 @@ terraform_apply() {
             terraform apply -var-file="$TERRAFORM_VARS"
         fi
         cd - > /dev/null
-        echo -e "${GREEN}✓ Resources deployed${NC}"
-        
+        echo -e "${GREEN}[OK] Resources deployed${NC}"
+
         # Configure kubectl
         echo -e "${BLUE}Configuring kubectl...${NC}"
         CLUSTER_NAME=$(cd "$AWS_DIR" && terraform output -raw eks_cluster_name 2>/dev/null || echo "")
         if [[ -n "$CLUSTER_NAME" ]]; then
             aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER_NAME"
-            echo -e "${GREEN}✓ kubectl configured${NC}"
+            echo -e "${GREEN}[OK] kubectl configured${NC}"
         fi
     else
         echo -e "${RED}Deployment cancelled${NC}"
@@ -132,16 +132,16 @@ terraform_apply() {
 }
 
 terraform_destroy() {
-    echo -e "${RED}⚠ DESTROYING AWS RESOURCES${NC}"
+    echo -e "${RED}[WARN] DESTROYING AWS RESOURCES${NC}"
     echo "This will DELETE all created resources!"
     read -p "Type 'yes' to confirm destruction: " -r
     echo
-    
+
     if [[ $REPLY == "yes" ]]; then
         cd "$AWS_DIR"
         terraform destroy -var-file="$TERRAFORM_VARS"
         cd - > /dev/null
-        echo -e "${GREEN}✓ Resources destroyed${NC}"
+        echo -e "${GREEN}[OK] Resources destroyed${NC}"
     else
         echo -e "${BLUE}Destruction cancelled${NC}"
     fi

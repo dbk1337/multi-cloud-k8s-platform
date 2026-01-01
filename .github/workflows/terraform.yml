@@ -1,5 +1,9 @@
 name: Terraform Plan and Apply
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -19,6 +23,7 @@ on:
 jobs:
   terraform-azure:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         environment: [dev, test, prod]
@@ -38,7 +43,6 @@ jobs:
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
         working-directory: ./terraform/azure
-        continue-on-error: true
 
       - name: Terraform Init
         run: terraform init -backend=false
@@ -52,7 +56,6 @@ jobs:
         run: terraform plan -var-file=../environments/${{ matrix.environment }}/azure.tfvars -no-color
         working-directory: ./terraform/azure
         id: plan
-        continue-on-error: true
 
       - name: Add Plan Comment to PR
         if: github.event_name == 'pull_request'
@@ -70,6 +73,7 @@ jobs:
 
   terraform-aws:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         environment: [dev, test, prod]
@@ -89,7 +93,6 @@ jobs:
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
         working-directory: ./terraform/aws
-        continue-on-error: true
 
       - name: Terraform Init
         run: terraform init -backend=false
@@ -103,7 +106,6 @@ jobs:
         run: terraform plan -var-file=../environments/${{ matrix.environment }}/aws.tfvars -no-color
         working-directory: ./terraform/aws
         id: plan
-        continue-on-error: true
 
       - name: Add Plan Comment to PR
         if: github.event_name == 'pull_request'

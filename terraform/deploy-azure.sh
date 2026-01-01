@@ -34,34 +34,34 @@ validate_azure_credentials() {
     fi
     ACCOUNT_NAME=$(az account show --query name --output tsv)
     SUBSCRIPTION_ID=$(az account show --query id --output tsv)
-    echo -e "${GREEN}Azure Account: $ACCOUNT_NAME${NC}"
-    echo -e "${GREEN}Subscription: $SUBSCRIPTION_ID${NC}"
+    echo -e "${GREEN}[OK] Azure Account: $ACCOUNT_NAME${NC}"
+    echo -e "${GREEN}[OK] Subscription: $SUBSCRIPTION_ID${NC}"
 }
 
 check_terraform_state_backend() {
     echo -e "${BLUE}Checking Terraform state backend...${NC}"
-    
+
     RG="rg-terraform-state"
     STORAGE="tfstate"
     CONTAINER="tfstate"
-    
+
     if az group show --name "$RG" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ Resource group exists: $RG${NC}"
+        echo -e "${GREEN}[OK] Resource group exists: $RG${NC}"
     else
-        echo -e "${YELLOW}⚠ Resource group not found: $RG${NC}"
+        echo -e "${YELLOW}[WARN] Resource group not found: $RG${NC}"
         read -p "Create it? (y/n) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             LOCATION=${LOCATION:-eastus}
             az group create --name "$RG" --location "$LOCATION"
-            echo -e "${GREEN}✓ Resource group created${NC}"
+            echo -e "${GREEN}[OK] Resource group created${NC}"
         fi
     fi
-    
+
     if az storage account show --name "$STORAGE" --resource-group "$RG" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ Storage account exists: $STORAGE${NC}"
+        echo -e "${GREEN}[OK] Storage account exists: $STORAGE${NC}"
     else
-        echo -e "${YELLOW}⚠ Storage account not found: $STORAGE${NC}"
+        echo -e "${YELLOW}[WARN] Storage account not found: $STORAGE${NC}"
         echo "Create it with:"
         echo "  az storage account create --resource-group $RG --name $STORAGE --sku Standard_LRS"
         echo "Or update backend.tf with your storage account"
@@ -74,7 +74,7 @@ check_terraform_variables() {
         echo "Create it using: cp environments/example-azure.tfvars $TERRAFORM_VARS"
         exit 1
     fi
-    echo -e "${GREEN}✓ Using variables: $TERRAFORM_VARS${NC}"
+    echo -e "${GREEN}[OK] Using variables: $TERRAFORM_VARS${NC}"
 }
 
 # Command functions
@@ -83,7 +83,7 @@ terraform_init() {
     cd "$AZURE_DIR"
     terraform init
     cd - > /dev/null
-    echo -e "${GREEN}✓ Terraform initialized${NC}"
+    echo -e "${GREEN}[OK] Terraform initialized${NC}"
 }
 
 terraform_validate() {
@@ -91,7 +91,7 @@ terraform_validate() {
     cd "$AZURE_DIR"
     terraform validate
     cd - > /dev/null
-    echo -e "${GREEN}✓ Configuration is valid${NC}"
+    echo -e "${GREEN}[OK] Configuration is valid${NC}"
 }
 
 terraform_fmt() {
@@ -99,7 +99,7 @@ terraform_fmt() {
     cd "$AZURE_DIR"
     terraform fmt -recursive
     cd - > /dev/null
-    echo -e "${GREEN}✓ Files formatted${NC}"
+    echo -e "${GREEN}[OK] Files formatted${NC}"
 }
 
 terraform_plan() {
@@ -107,15 +107,15 @@ terraform_plan() {
     cd "$AZURE_DIR"
     terraform plan -var-file="$TERRAFORM_VARS" -out=tfplan
     cd - > /dev/null
-    echo -e "${GREEN}✓ Plan saved to tfplan${NC}"
+    echo -e "${GREEN}[OK] Plan saved to tfplan${NC}"
 }
 
 terraform_apply() {
-    echo -e "${YELLOW}⚠ Applying Terraform changes...${NC}"
+    echo -e "${YELLOW}[WARN] Applying Terraform changes...${NC}"
     echo "This will create or modify Azure resources"
     read -p "Type 'yes' to confirm: " -r
     echo
-    
+
     if [[ $REPLY == "yes" ]]; then
         cd "$AZURE_DIR"
         if [[ -f tfplan ]]; then
@@ -125,15 +125,15 @@ terraform_apply() {
             terraform apply -var-file="$TERRAFORM_VARS"
         fi
         cd - > /dev/null
-        echo -e "${GREEN}✓ Resources deployed${NC}"
-        
+        echo -e "${GREEN}[OK] Resources deployed${NC}"
+
         # Configure kubectl
         echo -e "${BLUE}Configuring kubectl...${NC}"
         RG=$(grep "resource_group_name" "$TERRAFORM_VARS" | awk -F'"' '{print $2}')
         CLUSTER=$(grep "cluster_name" "$TERRAFORM_VARS" | head -1 | awk -F'"' '{print $2}')
         if [[ -n "$RG" && -n "$CLUSTER" ]]; then
             az aks get-credentials --resource-group "$RG" --name "$CLUSTER"
-            echo -e "${GREEN}✓ kubectl configured${NC}"
+            echo -e "${GREEN}[OK] kubectl configured${NC}"
         fi
     else
         echo -e "${RED}Deployment cancelled${NC}"
@@ -142,16 +142,16 @@ terraform_apply() {
 }
 
 terraform_destroy() {
-    echo -e "${RED}⚠ DESTROYING AZURE RESOURCES${NC}"
+    echo -e "${RED}[WARN] DESTROYING AZURE RESOURCES${NC}"
     echo "This will DELETE all created resources!"
     read -p "Type 'yes' to confirm destruction: " -r
     echo
-    
+
     if [[ $REPLY == "yes" ]]; then
         cd "$AZURE_DIR"
         terraform destroy -var-file="$TERRAFORM_VARS"
         cd - > /dev/null
-        echo -e "${GREEN}✓ Resources destroyed${NC}"
+        echo -e "${GREEN}[OK] Resources destroyed${NC}"
     else
         echo -e "${BLUE}Destruction cancelled${NC}"
     fi

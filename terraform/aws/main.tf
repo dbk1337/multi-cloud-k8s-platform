@@ -216,7 +216,7 @@ data "aws_availability_zones" "available" {
 
 # NAT resources to allow private subnets egress without exposing nodes
 resource "aws_eip" "nat" {
-    vpc = true
+    domain = "vpc"
 
     tags = {
         Name = "${var.cluster_name}-nat-eip"

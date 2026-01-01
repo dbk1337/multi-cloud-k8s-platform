@@ -1,0 +1,8 @@
+Thanks for deploying {{ include "myapp.fullname" . }}.
+
+Namespace: {{ default .Release.Namespace .Values.namespace.name }}
+Backend service: {{ include "myapp.fullname" . }}-backend (port {{ .Values.backend.service.port }})
+Frontend service: {{ include "myapp.fullname" . }}-frontend (port {{ .Values.frontend.service.port }})
+
+To access locally via port-forward:
+  kubectl -n {{ default .Release.Namespace .Values.namespace.name }} port-forward svc/{{ include "myapp.fullname" . }}-frontend 8080:{{ .Values.frontend.service.port }}
